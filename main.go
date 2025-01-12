@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -12,6 +11,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type SecondCollection struct {
+	Name string `bson:"name"`
+}
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -37,23 +40,24 @@ func main() {
 		}
 	}()
 
-	coll := client.Database("sample_mflix").Collection("movies")
-	title := "Back to the Future"
-
-	var result bson.M
-	err = coll.FindOne(context.TODO(), bson.D{{"title", title}}).
-		Decode(&result)
-	if err == mongo.ErrNoDocuments {
-		fmt.Printf("No document was found with the title %s\n", title)
-		return
-	}
+	// https://www.mongodb.com/ja-jp/docs/drivers/go/current/usage-examples/insertOne/
+	// こちらのコードを参考にして、InsertOneを利用
+	coll := client.Database("my_database").Collection("second_collection")
+	newSecondCollection := SecondCollection{Name: "8282"}
+	result, err := coll.InsertOne(context.TODO(), newSecondCollection)
 	if err != nil {
 		panic(err)
 	}
 
-	jsonData, err := json.MarshalIndent(result, "", "    ")
+	fmt.Printf("_id: %s\n", result.InsertedID)
+
+	// second_collectionの取得
+	var secondCollection SecondCollection
+	err = coll.FindOne(context.TODO(), bson.D{{"name", newSecondCollection.Name}}).Decode(&secondCollection)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%s\n", jsonData)
+
+	fmt.Printf("name: %s\n", secondCollection.Name)
+
 }
